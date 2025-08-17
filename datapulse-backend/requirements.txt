@@ -3,3 +3,5 @@ uvicorn[standard]==0.35.0
 python-multipart==0.0.20
 pandas==2.3.1
 psycopg2-binary==2.9.10
+supabase==2.3.4
+python-dotenv==1.0.0

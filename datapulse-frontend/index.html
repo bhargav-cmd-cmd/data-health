@@ -85,6 +85,12 @@
                     Quick Actions
                 </h2>
                 <div class="space-y-3">
+                    <div class="relative">
+                        <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="uploadCSV()">
+                        <button onclick="document.getElementById('csvFile').click()" class="w-full p-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all">
+                            📁 Upload CSV
+                        </button>
+                    </div>
                     <button onclick="refreshData()" class="w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
                         Refresh Data
                     </button>
@@ -187,6 +193,52 @@
         function generateInsights() {
             addActivity('Insights generated', 'green');
             alert('AI insights generated!');
+        }
+
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                addActivity('Uploading CSV file...', 'blue');
+                
+                const response = await axios.post('http://localhost:8000/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+                
+                const data = response.data;
+                addActivity(`CSV uploaded: ${data.rows} rows, ${data.cols} columns`, 'green');
+                
+                // Show upload results
+                alert(`File uploaded successfully!\n\n📊 Analysis Results:\n• Rows: ${data.rows}\n• Columns: ${data.cols}\n• Storage: ${data.storage}\n\n📋 Columns: ${data.columns.join(', ')}`);
+                
+                // Update chart with sample data if available
+                if (data.sample_data && data.sample_data.length > 0) {
+                    const sampleData = {
+                        x: data.sample_data.map((_, i) => i + 1),
+                        y: data.sample_data.map(row => Object.values(row)[0] || i + 1),
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        marker: { color: '#667eea' },
+                        name: 'Uploaded Data Sample'
+                    };
+                    Plotly.react('chart', [sampleData], layout);
+                }
+                
+            } catch (error) {
+                addActivity('CSV upload failed', 'red');
+                alert('Error uploading file: ' + error.message);
+            }
+            
+            // Reset file input
+            fileInput.value = '';
         }
 
         function addActivity(message, color) {
