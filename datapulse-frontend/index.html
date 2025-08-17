@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataPulse - Data Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-6xl font-bold gradient-text mb-4">
+                DataPulse
+            </h1>
+            <p class="text-xl text-white/90 mb-6">
+                Real-time Data Analytics Dashboard
+            </p>
+            <div id="status" class="inline-flex items-center px-4 py-2 rounded-full bg-red-500/20 text-red-300 border border-red-400">
+                <div id="status-dot" class="w-3 h-3 rounded-full mr-2 bg-red-400"></div>
+                <span id="status-text">Checking backend...</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Chart Card -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">
+                    Analytics Overview
+                </h2>
+                <div id="chart" style="width: 100%; height: 400px;"></div>
+            </div>
+
+            <!-- Stats Card -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                    System Status
+                </h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <span class="text-gray-700">Backend API</span>
+                        <span id="backend-status" class="px-3 py-1 rounded-full text-sm bg-red-100 text-red-800">
+                            Disconnected
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <span class="text-gray-700">Data Processing</span>
+                        <span class="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                            Active
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <span class="text-gray-700">Real-time Updates</span>
+                        <span class="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                            Enabled
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">
+                    Quick Actions
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="refreshData()" class="w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+                        Refresh Data
+                    </button>
+                    <button onclick="exportReport()" class="w-full p-3 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-lg hover:from-green-600 hover:to-teal-700 transition-all">
+                        Export Report
+                    </button>
+                    <button onclick="generateInsights()" class="w-full p-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all">
+                        Generate Insights
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="glass-card p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">
+                    Recent Activity
+                </h2>
+                <div id="activity-feed" class="space-y-3">
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                        <span class="text-gray-700">Data processed successfully</span>
+                        <span class="ml-auto text-sm text-gray-500">2 min ago</span>
+                    </div>
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        <span class="text-gray-700">New data source connected</span>
+                        <span class="ml-auto text-sm text-gray-500">5 min ago</span>
+                    </div>
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                        <span class="text-gray-700">Report generated</span>
+                        <span class="ml-auto text-sm text-gray-500">10 min ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data for the chart
+        const sampleData = {
+            x: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            y: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+            type: 'scatter',
+            mode: 'lines+markers',
+            marker: { color: '#667eea' },
+            name: 'Sample Data'
+        };
+
+        const layout = {
+            title: 'DataPulse Analytics',
+            xaxis: { title: 'Time' },
+            yaxis: { title: 'Value' },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#333' }
+        };
+
+        // Initialize chart
+        Plotly.newPlot('chart', [sampleData], layout, { responsive: true });
+
+        // Check backend connection
+        async function checkBackendStatus() {
+            try {
+                const response = await axios.get('http://localhost:8000/');
+                document.getElementById('status-text').textContent = response.data.message;
+                document.getElementById('status').className = 'inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-300 border border-green-400';
+                document.getElementById('status-dot').className = 'w-3 h-3 rounded-full mr-2 bg-green-400';
+                document.getElementById('backend-status').textContent = 'Connected';
+                document.getElementById('backend-status').className = 'px-3 py-1 rounded-full text-sm bg-green-100 text-green-800';
+            } catch (error) {
+                document.getElementById('status-text').textContent = 'Backend not connected';
+                document.getElementById('status').className = 'inline-flex items-center px-4 py-2 rounded-full bg-red-500/20 text-red-300 border border-red-400';
+                document.getElementById('status-dot').className = 'w-3 h-3 rounded-full mr-2 bg-red-400';
+                document.getElementById('backend-status').textContent = 'Disconnected';
+                document.getElementById('backend-status').className = 'px-3 py-1 rounded-full text-sm bg-red-100 text-red-800';
+            }
+        }
+
+        // Action functions
+        function refreshData() {
+            addActivity('Data refreshed', 'blue');
+            // Simulate data refresh
+            const newData = {
+                x: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                y: sampleData.y.map(y => y + Math.random() * 5),
+                type: 'scatter',
+                mode: 'lines+markers',
+                marker: { color: '#667eea' },
+                name: 'Updated Data'
+            };
+            Plotly.react('chart', [newData], layout);
+        }
+
+        function exportReport() {
+            addActivity('Report exported', 'purple');
+            alert('Report exported successfully!');
+        }
+
+        function generateInsights() {
+            addActivity('Insights generated', 'green');
+            alert('AI insights generated!');
+        }
+
+        function addActivity(message, color) {
+            const colors = {
+                green: 'bg-green-500',
+                blue: 'bg-blue-500',
+                purple: 'bg-purple-500'
+            };
+            
+            const activity = document.createElement('div');
+            activity.className = 'flex items-center p-3 bg-gray-50 rounded-lg';
+            activity.innerHTML = `
+                <div class="w-2 h-2 ${colors[color]} rounded-full mr-3"></div>
+                <span class="text-gray-700">${message}</span>
+                <span class="ml-auto text-sm text-gray-500">Just now</span>
+            `;
+            
+            const feed = document.getElementById('activity-feed');
+            feed.insertBefore(activity, feed.firstChild);
+            
+            // Remove old activities if too many
+            if (feed.children.length > 5) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Check status on load and every 5 seconds
+        checkBackendStatus();
+        setInterval(checkBackendStatus, 5000);
+    </script>
+</body>
+</html>
